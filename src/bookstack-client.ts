@@ -18,13 +18,17 @@ function parseRetryAfter(value: unknown): number | null {
 // (SearchRunner::filterCreatedBy et al. look users up by slug only). A numeric user ID is
 // the classic way to hit it, so reject that form up front and point the caller at
 // find_users for the slug.
+//
+// Negation in BookStack is a leading hyphen OUTSIDE the brace — `-{created_by:bob}` — per
+// SearchOptions' `/-?\{(.*?)\}/` term pattern, so it is captured here only to echo the
+// caller's filter back verbatim in the error.
 function validateUserIdFilters(query: string): void {
-  const re = /\{(!?)(created_by|updated_by|owned_by):([^}\s]+)\}/g;
+  const re = /(-?)\{(created_by|updated_by|owned_by):([^}\s]+)\}/g;
   for (const match of query.matchAll(re)) {
     const [, neg, field, value] = match;
     if (/^\d+$/.test(value)) {
       throw new Error(
-        `Search filter {${neg}${field}:${value}} takes a user slug or 'me', not a numeric user ID — ` +
+        `Search filter ${neg}{${field}:${value}} takes a user slug or 'me', not a numeric user ID — ` +
         `BookStack resolves these filters by slug and silently returns unfiltered results for ` +
         `unmatched values. Use the find_users tool to look up a user's slug by name or email.`
       );
